@@ -50,15 +50,26 @@ int	main(int ac, char** av)
 	//	return (1);
 	//}
 
-	struct sockaddr_in	addr;
-	zerocalcare(&addr, sizeof(addr));
-	int	ret = inet_pton(AF_INET, av[1], (void*)&(addr.sin_addr));
+	struct sockaddr_in	*addr;
+	struct sockaddr_in	lipton;
+	zerocalcare(&lipton, sizeof(lipton));
+	int	ret = inet_pton(AF_INET, av[1], (void*)&(lipton.sin_addr));
+	lipton.sin_family = AF_INET;
 	if (ret != 1)
 	{
-		perror("inet_pton");
-		return (1);
+		struct addrinfo*	addr_nfo;
+		zerocalcare(&addr_nfo, sizeof(addr_nfo));
+		ret = getaddrinfo(av[1], NULL, NULL, &addr_nfo);
+		if (ret != 0)
+		{
+			printf("getaddrinfo: %s\n", gai_strerror(ret));
+			return (1);
+		}
+		addr = (struct sockaddr_in*)addr_nfo->ai_addr;
+		addr->sin_family = AF_INET;
 	}
-	addr.sin_family = AF_INET;
+	else
+		addr = &lipton;
 
 	int	suck = socket(AF_INET, SOCK_DGRAM, 1);
 	if (suck == -1)
@@ -82,7 +93,7 @@ int	main(int ac, char** av)
 	mmcpy(text, data + sizeof(icmp_hdr), textsize);
 
 
-	ret = sendto(suck, data, datasize, 0, (struct sockaddr*)&addr, sizeof(addr));
+	ret = sendto(suck, data, datasize, 0, (struct sockaddr*)addr, sizeof(addr));
 	if (ret == -1)
 	{
 		perror("sendto");
