@@ -29,6 +29,28 @@ size_t	ft_strlen(const char* str)
 	return res;
 }
 
+typedef struct sockaddr_in	sain_t;
+
+int	get_target(const char* tgt, sain_t* sain)
+{
+	int	ret = inet_pton(AF_INET, tgt, (void*)&(sain->sin_addr));
+	sain->sin_family = AF_INET;
+	if (ret != 1)
+	{
+		struct addrinfo*	addr_nfo = NULL;
+		ret = getaddrinfo(tgt, NULL, NULL, &addr_nfo);
+		if (ret != 0)
+		{
+			dprintf(STDERR_FILENO, "ping: %s: %s\n", tgt, gai_strerror(ret));
+			return (1);
+		}
+		sain->sin_addr.s_addr = ((struct sockaddr_in*)addr_nfo->ai_addr)->sin_addr.s_addr;
+		freeaddrinfo(addr_nfo);
+	}
+	return (0);
+}
+
+//printf("ip: %s\n", inet_ntoa(addr->sin_addr));
 int	main(int ac, char** av)
 {
 	if (ac == 0)
@@ -36,40 +58,12 @@ int	main(int ac, char** av)
 		printf("I need something to ping\n");
 		return (1);
 	}
-//	struct icmphdr icmp_hdr;
-	//struct addrinfo*	res = NULL;
-	//struct addrinfo		hint;
-	//zerocalcare(&hint, sizeof(hint));
-	//hint.ai_family = AF_INET;
-	//hint.ai_socktype = SOCK_DGRAM;
-	//hint.ai_protocol = IPPROTO_ICMP;
-	//int	ret = getaddrinfo(av[1], NULL, &hint, &res);
-	//if (ret != 0)
-	//{
-	//	printf("%s\n", gai_strerror(ret));
-	//	return (1);
-	//}
 
-	struct sockaddr_in	*addr;
 	struct sockaddr_in	lipton;
 	zerocalcare(&lipton, sizeof(lipton));
-	int	ret = inet_pton(AF_INET, av[1], (void*)&(lipton.sin_addr));
-	lipton.sin_family = AF_INET;
-	if (ret != 1)
-	{
-		struct addrinfo*	addr_nfo;
-		zerocalcare(&addr_nfo, sizeof(addr_nfo));
-		ret = getaddrinfo(av[1], NULL, NULL, &addr_nfo);
-		if (ret != 0)
-		{
-			printf("getaddrinfo: %s\n", gai_strerror(ret));
-			return (1);
-		}
-		addr = (struct sockaddr_in*)addr_nfo->ai_addr;
-		addr->sin_family = AF_INET;
-	}
-	else
-		addr = &lipton;
+	int ret = get_target(av[1], &lipton);
+	if (ret)
+		return (1);
 
 	int	suck = socket(AF_INET, SOCK_DGRAM, 1);
 	if (suck == -1)
@@ -77,7 +71,6 @@ int	main(int ac, char** av)
 		perror("socket");
 		return (1);
 	}
-
 
 	struct icmphdr icmp_hdr;
 	zerocalcare(&icmp_hdr, sizeof(icmp_hdr));
@@ -93,7 +86,7 @@ int	main(int ac, char** av)
 	mmcpy(text, data + sizeof(icmp_hdr), textsize);
 
 
-	ret = sendto(suck, data, datasize, 0, (struct sockaddr*)addr, sizeof(addr));
+	ret = sendto(suck, data, datasize, 0, (struct sockaddr*)&lipton, sizeof(lipton));
 	if (ret == -1)
 	{
 		perror("sendto");
@@ -110,13 +103,14 @@ int	main(int ac, char** av)
 
 	msg_hdr.msg_iov = NULL;
 
-	char	msg_ctrl[1024];
-	zerocalcare(msg_ctrl, 1024);
-	msg_hdr.msg_control = msg_ctrl;
-	msg_hdr.msg_controllen = 1024;
+	char	msgname[1024];
+	zerocalcare(msgname, 1024);
+	msg_hdr.msg_name = msgname;
+	msg_hdr.msg_namelen = 1024;
 
 	size_t	rcvd = recvmsg(suck, &msg_hdr, 0);
-	printf("recmsg: %zu\n", rcvd);
+	(void)rcvd;
+	printf("%s - %s\n", inet_ntoa(lipton.sin_addr), inet_ntoa(((struct sockaddr_in*)msg_hdr.msg_name)->sin_addr));
 
 	close(suck);
 }
