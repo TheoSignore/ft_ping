@@ -1,47 +1,6 @@
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netdb.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <netinet/in.h>
-#include <netinet/ip_icmp.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include <signal.h>
-#include <sys/time.h>
-#ifndef ICMPREQ_SIZE
-# define ICMPREQ_SIZE 64
-# define ICMPECHO_DATA "Lorem ipsum dolor sit amet, consectetur adipiscing odio."
-#endif
-#define MSGHDR_NAMELEN 40
-#define MSGHDR_CONTROLLEN 32
-#define MSGHDR_IOV_BASELEN 64
+#include "ft_ping.h"
 
 char	sig = 0;
-
-void	mmcpy(void* src, void* dst, size_t size)
-{
-	for (size_t i = 0 ; i < size ; i++)
-		((unsigned char*)dst)[i] = ((unsigned char*)src)[i];
-}
-
-void	zerocalcare(void* ptr, size_t size)
-{
-	for (size_t i = 0 ; i < size ; i++)
-		((char*)ptr)[i] = 0;
-}
-
-size_t	ft_strlen(const char* str)
-{
-	size_t	res = 0;
-	while (str[res])
-		res++;
-	return res;
-}
-
-typedef struct sockaddr_in	sain_t;
 
 int	get_target(const char* tgt, sain_t* sain, char* target_type)
 {
@@ -62,7 +21,6 @@ int	get_target(const char* tgt, sain_t* sain, char* target_type)
 	}
 	return (0);
 }
-
 
 int	get_ttl(struct msghdr* msg_hdr)
 {
@@ -93,58 +51,23 @@ int	icmp_socket(void)
 	return (-1);
 }
 
-typedef struct s_ping
-{
-	size_t			seq;
-	time_t			seconds;
-	suseconds_t		microsec;
-	struct s_ping*	next;
-	struct s_ping*	last;
-}	ping_t;
-
 void	add_ping(ping_t* first, int seq, time_t seconds, suseconds_t micro)
 {
 	ping_t*	ptr = malloc(sizeof(ping_t));
 	ptr->seq = seq;
 	ptr->seconds = seconds;
 	ptr->microsec = micro;
-	ptr->next = NULL;
-	ptr->last = NULL;
-	first->last->next = ptr;
+	ptr->next = first->next;
+	first->next = ptr;
 }
 
-int	send_icmp_echo(int socket, struct sockaddr_in* targetptr, ping_t* first)
+ping_t*	init_pings(void)
 {
-	static int					suckit;
-	static struct sockaddr_in	target;
-	static struct icmphdr		*icmp_hdr;
-	static ping_t*				pings;
-	static unsigned char		data[ICMPREQ_SIZE];
-	static char					text[ICMPREQ_SIZE - sizeof(icmp_hdr)] = ICMPECHO_DATA;
-	static size_t	seq = 1;
-	int				ret;
-	struct timeval	tv;
-
-	if (targetptr)
-	{
-		pings = first;
-		suckit = socket;
-		mmcpy(targetptr, &target, sizeof(target));
-		zerocalcare(&icmp_hdr, sizeof(icmp_hdr));
-		icmp_hdr = (void*)data;
-		icmp_hdr->type = ICMP_ECHO;
-		icmp_hdr->un.echo.id = getpid();
-		mmcpy(text, data + sizeof(icmp_hdr), ICMPREQ_SIZE - sizeof(icmp_hdr));
-		return (0);
-	}
-
-	icmp_hdr->un.echo.sequence = seq;
-	
-	ret = sendto(suckit, data, ICMPREQ_SIZE, 0, (struct sockaddr*)&target, sizeof(target));
-	gettimeofday(&tv, NULL);
-	add_ping(pings, seq, tv.tv_sec, tv.tv_usec);
-	seq++;
-	return (0);
+	ping_t*	ptr = malloc(sizeof(ping_t));
+	ptr->seq = -1;
+	ptr->seconds = 0;
+	ptr->microsec = 0;
+	ptr->next = NULL;
 }
 
 void	build_msghdr(struct msghdr* msg_hdr, char* name, char* control, struct iovec* yovek)
@@ -171,12 +94,10 @@ void	handolo(int fuck)
 void	sendsig(int fuck)
 {
 	(void)fuck;
-	printf("lol\n");
+	send_icmp_echo();
 	alarm(1);
 }
 //printf("ip: %s\n", inet_ntoa(addr->sin_addr));
-
-typedef struct
 
 int	main(int ac, char** av)
 {
@@ -213,17 +134,17 @@ int	main(int ac, char** av)
 
 	printf("PING %s (%s) %zu(%zu) bytes of data.\n", av[1], (target_type ? inet_ntoa(target.sin_addr) : av[1]), ICMPREQ_SIZE - sizeof(struct icmphdr), (size_t)ICMPREQ_SIZE);
 
-	while(!sig){}
-	exit(0);
+	size_t		nbr_reply_rcvd = 0;
+
+	struct timeval	min;
+	struct timeval	max;
+	struct timeval	avg;
+	struct timeval	mdev;
+
 	int	rcvd;
-	while (!sig)
+	while(!sig)
 	{
-		if(send_icmp_echo(suckit, &target, sizeof(target)))
-		{
-			close(suckit);
-			return (1);
-		}
-		rcvd = recvmsg(suckit, &msg_hdr, MSG_DONTWAIT);
+		rcvd = recvmsg(suckit, &msg_hdr, 0);
 		if (rcvd != -1)
 		{
 			struct icmphdr	icmprpl;
@@ -242,22 +163,9 @@ int	main(int ac, char** av)
 			else
 				printf("FUCK\n");
 		}
-		usleep(1000000);
 	}
-
+	summary();
 	close(suckit);
+	free_shit();
+	return (0);
 }
-
-//typedef struct s_icmpecho
-//{
-//	size_t			len;
-//	unsigned char	type;
-//	char*			fqdn;
-//	char			ip[33];
-//	unsigned int	icmp_seq;
-//	char*			data;
-//	size_t			datalen;
-//}	icmpecho_t;
-
-
-
