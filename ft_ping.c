@@ -51,24 +51,6 @@ int	icmp_socket(void)
 	return (-1);
 }
 
-void	add_ping(ping_t* first, int seq, time_t seconds, suseconds_t micro)
-{
-	ping_t*	ptr = malloc(sizeof(ping_t));
-	ptr->seq = seq;
-	ptr->seconds = seconds;
-	ptr->microsec = micro;
-	ptr->next = first->next;
-	first->next = ptr;
-}
-
-ping_t*	init_pings(void)
-{
-	ping_t*	ptr = malloc(sizeof(ping_t));
-	ptr->seq = -1;
-	ptr->seconds = 0;
-	ptr->microsec = 0;
-	ptr->next = NULL;
-}
 
 void	build_msghdr(struct msghdr* msg_hdr, char* name, char* control, struct iovec* yovek)
 {

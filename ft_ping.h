@@ -26,30 +26,37 @@ void	zerocalcare(void* ptr, size_t size);
 size_t	ft_strlen(const char* str);
 
 typedef struct sockaddr_in	sain_t;
+typedef struct timeval		tv_t;
+
+void	time_diff(tv_t* a, tv_t* b, tv_t* res);
+void	time_div(tv_t* a, size_t nb, tv_t* c);
+void	time_sum(tv_t* a, tv_t* b, tv_t* res);
+int		time_grt(tv_t* a, tv_t* b);
+int		time_lwr(tv_t* a, tv_t* b);
 
 typedef struct s_ping
 {
-	size_t				seq;
-	struct timeval_t	sent;
-	struct timeval_t	rcvd;
-	struct s_ping*		next;
+	size_t			seq;
+	tv_t			sent;
+	tv_t			rcvd;
+	struct s_ping*	next;
 }	ping_t;
 
 typedef struct s_summary
 {
-	struct timeval_t*	min;
-	struct timeval_t*	max;
-	struct timeval_t	avg;
-	struct timeval_t	mdev;
-	size_t				transmitted;
-	size_t				received;
-	int					loss; // (received * 100) / transmitted
-	struct timeval_t	time; // max(rcvd) - min(rcvd)
+	tv_t*	min;
+	tv_t*	max;
+	tv_t	avg;
+	tv_t	mdev;
+	size_t	transmitted;
+	size_t	received;
+	size_t	loss; // (received * 100) / transmitted
+	tv_t	time; // max(rcvd) - min(rcvd)
 }	summary_t;
 
 void	add_ping(ping_t* first, int seq, time_t seconds, suseconds_t micro);
 void	note_reply(ping_t* first, size_t sequence, time_t seconds, suseconds_t micro);
-void	get_summary(ping_t* first, struct timeval_t** min, struct timeval_t** max, struct timeval_t* avg, struct timeval_t* mdev, 
+void	get_summary(ping_t* first, summary_t* summary);
 
 void	set_icmp_echo(int socket, sain_t* targetptr, ping_t* pings);
 int		send_icmp_echo(void);
