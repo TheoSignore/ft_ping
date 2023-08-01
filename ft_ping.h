@@ -21,6 +21,36 @@
 #define MSGHDR_NAMELEN 40
 #define MSGHDR_CONTROLLEN 32
 #define MSGHDR_IOV_BASELEN 64
+#define MSGHDR_TOTAL_SIZE (sizeof(struct msghdr) + sizeof(struct iovec) + MSGHDR_NAMELEN + MSGHDR_CONTROLLEN + MSGHDR_IOV_BASELEN)
+#define MSGHDR_IOV_OFFSET (sizeof(struct msghdr))
+#define MSGHDR_NAME_OFFSET (MSGHDR_IOV_OFFSET + sizeof(struct iovec))
+#define MSGHDR_CONTROL_OFFSET (MSGHDR_NAME_OFFSET + MSGHDR_NAMELEN)
+#define MSGHDR_IOVBASE_OFFSET (MSGHDR_CONTROL_OFFSET + MSGHDR_CONTROLLEN)
+
+/*
+ * ┌─ ptr
+ * │
+ * │ struct msghdr
+ * │
+ * ├─ ptr + sizeof(struct msghdr)
+ * │
+ * │ msghdr.msg_iov
+ * │
+ * ├─ ptr + sizeof(struct msghdr) + sizeof(struct iovec)
+ * │
+ * │ msghdr.msg_name
+ * │
+ * ├─ ptr + sizeof(struct msghdr) + sizeof(struct iovec) + NAMELEN
+ * │
+ * │ msghdr.msg_control
+ * │
+ * ├─ ptr + sizeof(struct msghdr) + sizeof(struct iovec) + NAMELEN + CONTROLLEN
+ * │
+ * │ msghdr.msg_iov.base
+ * │
+ * └─
+ */
+
 void	mmcpy(void* src, void* dst, size_t size);
 void	zerocalcare(void* ptr, size_t size);
 size_t	ft_strlen(const char* str);
@@ -54,9 +84,10 @@ typedef struct s_summary
 	tv_t	time; // max(rcvd) - min(rcvd)
 }	summary_t;
 
-void	add_ping(ping_t* first, int seq, time_t seconds, suseconds_t micro);
+void	add_ping(ping_t** first, int seq, time_t seconds, suseconds_t micro);
 void	note_reply(ping_t* first, size_t sequence, time_t seconds, suseconds_t micro);
 void	get_summary(ping_t* first, summary_t* summary);
 
-void	set_icmp_echo(int socket, sain_t* targetptr, ping_t* pings);
+void	set_icmp_echo(int socket, sain_t* targetptr, ping_t** pings);
 int		send_icmp_echo(void);
+struct msghdr*	alloc_msghdr(void);

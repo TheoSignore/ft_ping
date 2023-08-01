@@ -1,6 +1,6 @@
 #include "ft_ping.h"
 
-void	add_ping(ping_t* first, int seq, time_t seconds, suseconds_t micro)
+void	add_ping(ping_t** first, int seq, time_t seconds, suseconds_t micro)
 {
 	ping_t*	ptr = malloc(sizeof(ping_t));
 	ptr->seq = seq;
@@ -8,8 +8,8 @@ void	add_ping(ping_t* first, int seq, time_t seconds, suseconds_t micro)
 	ptr->sent.tv_usec = micro;
 	ptr->rcvd.tv_sec = 0;
 	ptr->rcvd.tv_usec = 0;
-	ptr->next = first->next;
-	first->next = ptr;
+	ptr->next = (*first);
+	*first = ptr;
 }
 
 void	note_reply(ping_t* first, size_t sequence, time_t seconds, suseconds_t micro)

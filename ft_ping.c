@@ -51,22 +51,6 @@ int	icmp_socket(void)
 	return (-1);
 }
 
-
-void	build_msghdr(struct msghdr* msg_hdr, char* name, char* control, struct iovec* yovek)
-{
-	zerocalcare(msg_hdr, sizeof(msg_hdr));
-	msg_hdr->msg_name = name;
-	zerocalcare(msg_hdr->msg_name, MSGHDR_NAMELEN);
-	msg_hdr->msg_namelen = MSGHDR_NAMELEN;
-
-	msg_hdr->msg_control = control;
-	zerocalcare(msg_hdr->msg_control, MSGHDR_CONTROLLEN);
-	msg_hdr->msg_controllen = MSGHDR_CONTROLLEN;
-
-	msg_hdr->msg_iov = yovek;
-	msg_hdr->msg_iovlen = 1;
-}
-
 void	handolo(int fuck)
 {
 	(void)fuck;
@@ -101,14 +85,6 @@ int	main(int ac, char** av)
 	if (suckit == -1)
 		return (1);
 
-	struct msghdr	msg_hdr;
-	char			msghdr_name[MSGHDR_NAMELEN];
-	char			msghdr_ctrl[MSGHDR_CONTROLLEN];
-	char			msghdr_iovbase[MSGHDR_IOV_BASELEN];
-	struct iovec	yovek;
-	yovek.iov_base = msghdr_iovbase;
-	yovek.iov_len = MSGHDR_IOV_BASELEN;
-	build_msghdr(&msg_hdr, msghdr_name, msghdr_ctrl, &yovek);
 
 	signal(SIGINT, &handolo);
 	signal(SIGALRM, &sendsig);
@@ -118,33 +94,9 @@ int	main(int ac, char** av)
 
 	size_t		nbr_reply_rcvd = 0;
 
-	struct timeval	min;
-	struct timeval	max;
-	struct timeval	avg;
-	struct timeval	mdev;
-
-	int	rcvd;
+	struct msghdr*	msg_hdr = alloc_msghdr();
 	while(!sig)
 	{
-		rcvd = recvmsg(suckit, &msg_hdr, 0);
-		if (rcvd != -1)
-		{
-			struct icmphdr	icmprpl;
-			char			buffer[57];
-			zerocalcare(buffer, 57);
-			mmcpy(msg_hdr.msg_iov->iov_base, &icmprpl, sizeof(struct icmphdr));
-			mmcpy(msg_hdr.msg_iov->iov_base + sizeof(struct icmphdr), &buffer, 56);
-
-			if (icmprpl.type == ICMP_ECHOREPLY)
-			{
-				if (target_type)
-					printf("%i bytes from %s (%s): icmp_seq=%i ttl=%i\n", rcvd, av[1], inet_ntoa(((struct sockaddr_in*)msg_hdr.msg_name)->sin_addr) , icmprpl.un.echo.sequence, get_ttl(&msg_hdr));
-				else
-					printf("%i bytes from %s: icmp_seq=%i ttl=%i\n", rcvd,inet_ntoa(((struct sockaddr_in*)msg_hdr.msg_name)->sin_addr) , icmprpl.un.echo.sequence, get_ttl(&msg_hdr));
-			}
-			else
-				printf("FUCK\n");
-		}
 	}
 	summary();
 	close(suckit);
