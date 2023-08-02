@@ -33,7 +33,7 @@ static int	icmp_echo(int socket, struct sockaddr_in* targetptr, ping_t** first)
 	gettimeofday(&tv, NULL);
 	add_ping(pings, seq, tv.tv_sec, tv.tv_usec);
 	seq++;
-	return (0);
+	return (ret);
 }
 
 void	set_icmp_echo(int socket, sain_t* targetptr, ping_t** pings)
@@ -46,29 +46,27 @@ int		send_icmp_echo(void)
 	return icmp_echo(-1, NULL, NULL);
 }
 
-int	receive_icmp_reply(int suckit, struct msghdr* msg_hdr, char* tgt, int target_type)
+int	receive_icmp_reply(struct msghdr* msg_hdr, char* tgt, int target_type, ping_t** pings, int res)
 {
 	struct icmphdr	icmprpl;
-	int				res;
 	char			buffer[57];
+	tv_t			tv;
+	ping_t			*replied_ping;
 
-	zerocalcare(msg_hdr, MSGHDR_TOTAL_SIZE);
-	res = recvmsg(suckit, msg_hdr, 0);
+	gettimeofday(&tv, NULL);
+	zerocalcare(buffer, 57);
+	mmcpy(msg_hdr->msg_iov->iov_base, &icmprpl, sizeof(struct icmphdr));
+	mmcpy(msg_hdr->msg_iov->iov_base + sizeof(struct icmphdr), &buffer, 56);
 
-	if (res != -1)
+	if (icmprpl.type == ICMP_ECHOREPLY)
 	{
-		zerocalcare(buffer, 57);
-		mmcpy(msg_hdr->msg_iov->iov_base, &icmprpl, sizeof(struct icmphdr));
-		mmcpy(msg_hdr->msg_iov->iov_base + sizeof(struct icmphdr), &buffer, 56);
-
-		if (icmprpl.type == ICMP_ECHOREPLY)
-		{
-			if (target_type)
-				printf("%i bytes from %s (%s): icmp_seq=%i ttl=%i\n", res, tgt, inet_ntoa(((struct sockaddr_in*)msg_hdr.msg_name)->sin_addr) , icmprpl.un.echo.sequence, get_ttl(msg_hdr));
-			else
-				printf("%i bytes from %s: icmp_seq=%i ttl=%i\n", rcvd,inet_ntoa(((struct sockaddr_in*)msg_hdr.msg_name)->sin_addr) , icmprpl.un.echo.sequence, get_ttl(msg_hdr));
-		}
+		replied_ping = note_reply(*pings, icmprpl.un.echo.sequence, tv.tv_sec, tv.tv_usec);
+		if (target_type)
+			printf("%i bytes from %s (%s): icmp_seq=%i ttl=%i time=%.2f ms\n", res, tgt, inet_ntoa(((struct sockaddr_in*)msg_hdr->msg_name)->sin_addr) , icmprpl.un.echo.sequence, get_ttl(msg_hdr), time_to_fms(&(replied_ping->delay)));
 		else
-			printf("FUCK\n");
+			printf("%i bytes from %s: icmp_seq=%i ttl=%i\n time=%.2f ms\n", res,inet_ntoa(((struct sockaddr_in*)msg_hdr->msg_name)->sin_addr) , icmprpl.un.echo.sequence, get_ttl(msg_hdr), time_to_fms(&(replied_ping->delay)));
 	}
+	else
+		printf("FUCK\n");
+	return (0);
 }

@@ -22,18 +22,6 @@ int	get_target(const char* tgt, sain_t* sain, char* target_type)
 	return (0);
 }
 
-int	get_ttl(struct msghdr* msg_hdr)
-{
-	int	ttl = -1;
-	struct cmsghdr*	cmsg;
-	for (cmsg = CMSG_FIRSTHDR(msg_hdr) ; cmsg != NULL ; cmsg = CMSG_NXTHDR(msg_hdr, cmsg))
-	{
-		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_TTL)
-			mmcpy(CMSG_DATA(cmsg), &ttl, sizeof(ttl));
-	}
-	return (ttl);
-}
-
 int	icmp_socket(void)
 {
 	int	suckit = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
@@ -61,7 +49,8 @@ void	sendsig(int fuck)
 {
 	(void)fuck;
 	send_icmp_echo();
-	alarm(1);
+	if (!sig)
+		alarm(1);
 }
 //printf("ip: %s\n", inet_ntoa(addr->sin_addr));
 
@@ -72,7 +61,6 @@ int	main(int ac, char** av)
 		printf("I need something to ping\n");
 		return (1);
 	}
-	printf ("PID: %i\n", getpid());
 
 	struct sockaddr_in	target;
 	char				target_type = 0;
@@ -85,21 +73,40 @@ int	main(int ac, char** av)
 	if (suckit == -1)
 		return (1);
 
+	ping_t*	first_ping = NULL;
 
 	signal(SIGINT, &handolo);
+
+	set_icmp_echo(suckit, &target, &first_ping);
 	signal(SIGALRM, &sendsig);
-	alarm(1);
 
 	printf("PING %s (%s) %zu(%zu) bytes of data.\n", av[1], (target_type ? inet_ntoa(target.sin_addr) : av[1]), ICMPREQ_SIZE - sizeof(struct icmphdr), (size_t)ICMPREQ_SIZE);
-
-	size_t		nbr_reply_rcvd = 0;
+	alarm(1);
 
 	struct msghdr*	msg_hdr = alloc_msghdr();
+	int	res = 0;
 	while(!sig)
 	{
+		res = recvmsg(suckit, msg_hdr, MSG_DONTWAIT);
+		if(res > 0)
+		{
+			receive_icmp_reply(msg_hdr, av[1], target_type, &first_ping, res);
+		}
 	}
-	summary();
+	free(msg_hdr);
+	summary_t	summary;
+	get_summary(first_ping, &summary);
 	close(suckit);
-	free_shit();
+	free_pings(first_ping);
+	printf("--- %s ping statistics ---\n%zu packets transmitted, %zu received, %zu%% packet loss, time %zums\nrtt min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms\n",
+			av[1],
+			summary.transmitted,
+			summary.received,
+			summary.loss,
+			time_to_ims(&(summary.time)),
+			time_to_fms(&(summary.min)),
+			time_to_fms(&(summary.avg)),
+			time_to_fms(&(summary.max)),
+			time_to_fms(&(summary.mdev)));
 	return (0);
 }
