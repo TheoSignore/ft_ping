@@ -45,17 +45,3 @@ struct msghdr*	alloc_msghdr(void)
 	((struct msghdr*)ptr)->msg_iov->iov_len = MSGHDR_IOV_BASELEN;
 	return (ptr);
 }
-
-int	get_ttl(struct msghdr* msg_hdr)
-{
-	int	ttl = -1;
-	struct cmsghdr*	cmsg;
-	for (cmsg = CMSG_FIRSTHDR(msg_hdr) ; cmsg != NULL ; cmsg = CMSG_NXTHDR(msg_hdr, cmsg))
-	{
-		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_TTL)
-			mmcpy(CMSG_DATA(cmsg), &ttl, sizeof(ttl));
-		else
-			printf("lvl: (%i)%i\ttype: %i\n", IP_RECVERR, cmsg->cmsg_level, cmsg->cmsg_type);
-	}
-	return (ttl);
-}

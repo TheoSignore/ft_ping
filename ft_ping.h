@@ -15,14 +15,14 @@
 #include <limits.h>
 #include <linux/errqueue.h>
 
-#ifndef ICMPREQ_SIZE
-# define ICMPREQ_SIZE 64
-# define ICMPECHO_DATA "Lorem ipsum dolor sit amet, consectetur adipiscing odio."
-#endif
+#define ICMP_ECHO_SIZE 64
+#define ICMP_DATA_SIZE (ICMP_ECHO_SIZE - sizeof(struct icmphdr))
+#define ICMP_ECHO_DATA "Lorem ipsum dolor sit amet, consectetur adipiscing odio."
+#define DGRAM_SIZE (sizeof(struct iphdr) + ICMP_ECHO_SIZE)
 
-#define MSGHDR_NAMELEN 40
+#define MSGHDR_NAMELEN sizeof(struct sockaddr_in)
 #define MSGHDR_CONTROLLEN 64
-#define MSGHDR_IOV_BASELEN 64
+#define MSGHDR_IOV_BASELEN sizeof(struct iphdr) + ICMP_ECHO_SIZE + 64
 #define MSGHDR_TOTAL_SIZE (sizeof(struct msghdr) + sizeof(struct iovec) + MSGHDR_NAMELEN + MSGHDR_CONTROLLEN + MSGHDR_IOV_BASELEN)
 #define MSGHDR_IOV_OFFSET (sizeof(struct msghdr))
 #define MSGHDR_NAME_OFFSET (MSGHDR_IOV_OFFSET + sizeof(struct iovec))
@@ -35,6 +35,7 @@ void	zerocalcare(void* ptr, size_t size);
 size_t	ft_strlen(const char* str);
 
 typedef struct timeval		tv_t;
+typedef struct sockaddr_in	sain_t;
 
 void	time_diff(tv_t* a, tv_t* b, tv_t* res);
 void	time_div(tv_t* a, size_t nb, tv_t* c);
@@ -54,6 +55,13 @@ typedef struct s_ping
 	struct s_ping*	next;
 }	ping_t;
 
+typedef struct s_dgram
+{
+	struct iphdr	ip_hdr;
+	struct icmphdr	icmp_hdr;
+	char			data[ICMP_DATA_SIZE];
+}	dgram_t;
+
 typedef struct s_summary
 {
 	tv_t	min;
@@ -65,16 +73,16 @@ typedef struct s_summary
 	size_t	loss;
 }	summary_t;
 
+
+
+struct msghdr*	alloc_msghdr(void);
+
+dgram_t*	create_dgram(sain_t* target);
+void		set_icmp_echo(int socket, dgram_t* dgram, sain_t* targetptr, ping_t** pings);
+int			send_icmp_echo(void);
+int			receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int res);
+
 void	add_ping(ping_t** first, int seq, time_t seconds, suseconds_t micro);
 ping_t*	note_reply(ping_t* first, size_t sequence, time_t seconds, suseconds_t micro);
 void	get_summary(ping_t* first, summary_t* summary);
 void	free_pings(ping_t* first_ping);
-
-typedef struct sockaddr_in	sain_t;
-
-struct msghdr*	alloc_msghdr(void);
-int				get_ttl(struct msghdr* msg_hdr);
-
-void	set_icmp_echo(int socket, sain_t* targetptr, ping_t** pings);
-int		send_icmp_echo(void);
-int		receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int res);
