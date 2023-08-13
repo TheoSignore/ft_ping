@@ -126,7 +126,7 @@ int	main(int ac, char** av)
 		res = recvmsg(suckit, msg_hdr, MSG_DONTWAIT);
 		if(res > 0)
 		{
-			receive_icmp_reply(msg_hdr, &first_ping, res, &target);
+			receive_icmp_reply(msg_hdr, &first_ping, res, &target, vrb);
 		}
 	}
 	close(suckit);

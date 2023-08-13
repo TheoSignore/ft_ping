@@ -68,7 +68,7 @@ static int	get_fqdn(target_t* src)
 	return (res);
 }
 
-int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target_t* target)
+int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target_t* target, char vrb)
 {
 	dgram_t*	dgram;
 	tv_t		tv;
@@ -130,6 +130,11 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target
 				break;
 			default:
 				printf("Something went wrong\n");
+		}
+		if (vrb)
+		{
+			dgram_t*	ptr = (void*)dgram->data;
+			dgram_dump(ptr, bytes - (sizeof(struct iphdr) * 2) - sizeof(struct icmphdr));
 		}
 	}
 	else

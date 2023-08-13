@@ -1,6 +1,6 @@
 SRCS	:=	ft_ping.c \
 			sending_and_receiving.c \
-			dgram.c \
+			dgram_and_hdrs.c \
 			msghdr.c \
 			pings.c \
 			time_stuff.c \

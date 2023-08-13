@@ -20,13 +20,13 @@ size_t	ft_strlen(const char* str)
 	return res;
 }
 
-void	ipv4_ntoa(uint32_t s_addr, char* dst)
+size_t	ipv4_ntoa(uint32_t s_addr, char* dst)
 {
-	zerocalcare(dst, 12);
-	sprintf(dst, "%hhu.%hhu.%hhu.%hhu",
+	zerocalcare(dst, 16);
+	return(sprintf(dst, "%hhu.%hhu.%hhu.%hhu",
 			((uint8_t*)&(s_addr))[0],
 			((uint8_t*)&(s_addr))[1],
 			((uint8_t*)&(s_addr))[2],
 			((uint8_t*)&(s_addr))[3]
-			);
+			));
 }
