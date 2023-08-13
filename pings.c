@@ -27,22 +27,6 @@ ping_t*	note_reply(ping_t* first, size_t sequence, time_t seconds, suseconds_t m
 	return (NULL);
 }
 
-//static void	diffs_to_avg(ping_t* first, tv_t* avg)
-//{
-//	while (first)
-//	{
-//		if (first->seq == (size_t)-1)
-//		{
-//			if (time_lwr(&(first->delay), avg))
-//				time_diff(avg, &(first->delay), &(first->delay));
-//			else
-//				time_diff(&(first->delay), avg, &(first->delay));
-//		}
-//		first = first->next;
-//	}
-//}
-
-//static void	get_mdev(ping_t* first, tv_t* avg, tv_t* mdev, size_t nbr)
 void	get_mdev(ping_t* first, tv_t* avg, tv_t* mdev, size_t nbr)
 {
 	tv_t	tmp;
@@ -98,9 +82,14 @@ void	get_summary(ping_t* first, summary_t* summary)
 		first = first->next;
 	}
 	first = tmp;
-	time_div(&delay_sum, summary->received, &(summary->avg));
-	summary->loss = ((summary->received * 100) / summary->transmitted) - 100;
-	get_mdev(first, &(summary->avg), &(summary->mdev), summary->received);
+	if (summary->received)
+	{
+		time_div(&delay_sum, summary->received, &(summary->avg));
+		get_mdev(first, &(summary->avg), &(summary->mdev), summary->received);
+		summary->loss = ((summary->received * 100) / summary->transmitted) - 100;
+	}
+	else
+		summary->loss = 100;
 	
 }
 

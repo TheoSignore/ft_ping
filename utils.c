@@ -1,9 +1,9 @@
 #include "ft_ping.h"
 
-void	mmcpy(void* src, void* dst, size_t size)
+void	mmcpy(const void* src, void* dst, size_t size)
 {
 	for (size_t i = 0 ; i < size ; i++)
-		((unsigned char*)dst)[i] = ((unsigned char*)src)[i];
+		((unsigned char*)dst)[i] = ((const unsigned char*)src)[i];
 }
 
 void	zerocalcare(void* ptr, size_t size)
@@ -18,4 +18,15 @@ size_t	ft_strlen(const char* str)
 	while (str[res])
 		res++;
 	return res;
+}
+
+void	ipv4_ntoa(uint32_t s_addr, char* dst)
+{
+	zerocalcare(dst, 12);
+	sprintf(dst, "%hhu.%hhu.%hhu.%hhu",
+			((uint8_t*)&(s_addr))[0],
+			((uint8_t*)&(s_addr))[1],
+			((uint8_t*)&(s_addr))[2],
+			((uint8_t*)&(s_addr))[3]
+			);
 }

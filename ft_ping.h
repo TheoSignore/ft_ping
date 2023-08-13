@@ -30,9 +30,10 @@
 #define MSGHDR_IOVBASE_OFFSET (MSGHDR_CONTROL_OFFSET + MSGHDR_CONTROLLEN)
 
 
-void	mmcpy(void* src, void* dst, size_t size);
+void	mmcpy(const void* src, void* dst, size_t size);
 void	zerocalcare(void* ptr, size_t size);
 size_t	ft_strlen(const char* str);
+void	ipv4_ntoa(uint32_t s_addr, char* dst);
 
 typedef struct timeval		tv_t;
 typedef struct sockaddr_in	sain_t;
@@ -73,14 +74,22 @@ typedef struct s_summary
 	size_t	loss;
 }	summary_t;
 
+typedef struct s_target
+{
+	char*	fqdn;
+	char	ip[12];
+	sain_t	addr;
+}	target_t;
 
 
 struct msghdr*	alloc_msghdr(void);
 
 dgram_t*	create_dgram(sain_t* target);
+void		set_icmp(struct icmphdr* icmp_hdr, char* data);
+
 void		set_icmp_echo(int socket, dgram_t* dgram, sain_t* targetptr, ping_t** pings);
 int			send_icmp_echo(void);
-int			receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int res);
+int			receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int res, target_t* target);
 
 void	add_ping(ping_t** first, int seq, time_t seconds, suseconds_t micro);
 ping_t*	note_reply(ping_t* first, size_t sequence, time_t seconds, suseconds_t micro);

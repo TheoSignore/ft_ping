@@ -2,22 +2,28 @@
 
 char	sig = 0;
 
-int	get_target(const char* tgt, sain_t* sain, char* target_type)
+static int	get_target(char* arg, target_t* target)
 {
-	int	ret = inet_pton(AF_INET, tgt, (void*)&(sain->sin_addr));
-	sain->sin_family = AF_INET;
+	int	ret = inet_pton(AF_INET, arg, (void*)&(target->addr.sin_addr));
+	target->addr.sin_family = AF_INET;
 	if (ret != 1)
 	{
 		struct addrinfo*	addr_nfo = NULL;
-		ret = getaddrinfo(tgt, NULL, NULL, &addr_nfo);
+		ret = getaddrinfo(arg, NULL, NULL, &addr_nfo);
 		if (ret != 0)
 		{
-			dprintf(STDERR_FILENO, "ping: %s: %s\n", tgt, gai_strerror(ret));
+			dprintf(STDERR_FILENO, "ping: %s: %s\n", arg, gai_strerror(ret));
 			return (1);
 		}
-		sain->sin_addr.s_addr = ((struct sockaddr_in*)addr_nfo->ai_addr)->sin_addr.s_addr;
+		target->fqdn = arg;
+		target->addr.sin_addr.s_addr = ((struct sockaddr_in*)addr_nfo->ai_addr)->sin_addr.s_addr;
+		ipv4_ntoa(target->addr.sin_addr.s_addr, target->ip);
 		freeaddrinfo(addr_nfo);
-		*target_type = 1;
+	}
+	else
+	{
+		mmcpy(arg, target->ip, 12);
+		target->fqdn = NULL;
 	}
 	return (0);
 }
@@ -69,14 +75,26 @@ int	main(int ac, char** av)
 		return (1);
 	}
 
-	char	vrb = 1;
-	struct sockaddr_in	target;
-	char				target_type = 0;
+	int vrb = 0;
+	if (ac == 3)
+	{
+		if (av[1][0] == '-' && av[1][1] == 'v')
+		{
+			vrb = 1;
+			av[1] = av[2];
+		}
+		else
+		{
+			dprintf(STDERR_FILENO, "Unknown option: \"%s\"\nUsage: ft_ping [-v] <IPv4 | FQDN>\n", av[1]);
+			return (1);
+		}
+	}
+	target_t	target;
 	zerocalcare(&target, sizeof(target));
-	int ret = get_target(av[1], &target, &target_type);
+	int ret = get_target(av[1], &target);
 	if (ret)
 		return (1);
-	
+
 	int	suckit = icmp_socket();
 	if (suckit == -1)
 		return (1);
@@ -85,20 +103,20 @@ int	main(int ac, char** av)
 
 	signal(SIGINT, &handolo);
 
-	dgram_t*	dgram = create_dgram(&target);
+	dgram_t*	dgram = create_dgram(&(target.addr));
 	if (!dgram)
 	{
 		close(suckit);
 		return (1);
 	}
 
-	set_icmp_echo(suckit, dgram, &target, &first_ping);
+	set_icmp_echo(suckit, dgram, &(target.addr), &first_ping);
 	signal(SIGALRM, &sendsig);
 
 	if (vrb)
-		printf("PING %s (%s): %zu bytes of data, id 0x%x = %i\n", av[1], (target_type ? inet_ntoa(target.sin_addr) : av[1]), ICMP_ECHO_SIZE - sizeof(struct icmphdr), getpid(), getpid());
+		printf("PING %s (%s): %zu data bytes, id 0x%x = %i\n", av[1], target.ip, ICMP_ECHO_SIZE - sizeof(struct icmphdr), getpid(), getpid());
 	else
-		printf("PING %s (%s): %zu bytes of data.\n", av[1], (target_type ? inet_ntoa(target.sin_addr) : av[1]), ICMP_ECHO_SIZE - sizeof(struct icmphdr));
+		printf("PING %s (%s): %zu data bytes.\n", av[1], target.ip, ICMP_ECHO_SIZE - sizeof(struct icmphdr));
 	alarm(1);
 
 	struct msghdr*	msg_hdr = alloc_msghdr();
@@ -108,7 +126,7 @@ int	main(int ac, char** av)
 		res = recvmsg(suckit, msg_hdr, MSG_DONTWAIT);
 		if(res > 0)
 		{
-			receive_icmp_reply(msg_hdr, &first_ping, res);
+			receive_icmp_reply(msg_hdr, &first_ping, res, &target);
 		}
 	}
 	close(suckit);
@@ -116,14 +134,20 @@ int	main(int ac, char** av)
 	summary_t	summary;
 	get_summary(first_ping, &summary);
 	free_pings(first_ping);
-	printf("--- %s ping statistics ---\n%zu packets transmitted, %zu received, %zu%% packet loss\n round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
+	printf("--- %s ping statistics ---\n%zu packets transmitted, %zu received, %zu%% packet loss\n",
 			av[1],
 			summary.transmitted,
 			summary.received,
-			summary.loss,
+			summary.loss
+		);
+	if (summary.received)
+	{
+		printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
 			time_to_fms(&(summary.min)),
 			time_to_fms(&(summary.avg)),
 			time_to_fms(&(summary.max)),
-			time_to_fms(&(summary.mdev)));
+			time_to_fms(&(summary.mdev))
+			);
+	}
 	return (0);
 }
