@@ -25,7 +25,8 @@ static int	icmp_echo(int socket, dgram_t* dgram, sain_t* targetptr, ping_t** fir
 	set_icmp(&(data->icmp_hdr), NULL);
 	ret = sendto(suckit, data, sizeof(dgram_t), 0, (struct sockaddr*)target, sizeof(sain_t));
 	gettimeofday(&tv, NULL);
-	add_ping(pings, data->icmp_hdr.un.echo.sequence, tv.tv_sec, tv.tv_usec);
+	if(add_ping(pings, data->icmp_hdr.un.echo.sequence, tv.tv_sec, tv.tv_usec))
+		sig = 1;
 	return (ret);
 }
 
@@ -56,7 +57,7 @@ static int	get_fqdn(target_t* src)
 		}
 		else
 		{
-			perror("ping: malloc()");
+			perror("ft_ping: malloc()");
 			return (EAI_FAIL);
 		}
 	}
@@ -68,7 +69,7 @@ static int	get_fqdn(target_t* src)
 	return (res);
 }
 
-int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target_t* target, char vrb)
+int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target_t* target, char vrb, uint16_t id)
 {
 	dgram_t*	dgram;
 	tv_t		tv;
@@ -81,6 +82,8 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target
 	source.addr.sin_port = 0;
 	source.addr.sin_addr.s_addr = dgram->ip_hdr.saddr;
 
+	if (dgram->icmp_hdr.type == ICMP_ECHO || id != dgram->icmp_hdr.un.echo.id)
+		return (0);
 	if (dgram->ip_hdr.saddr != target->addr.sin_addr.s_addr)
 	{
 		get_fqdn(&source);
@@ -90,6 +93,7 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target
 			(source.fqdn ? source.fqdn : source.ip),
 			source.ip
 		);
+		free(source.fqdn);
 	}
 	else
 	{
@@ -101,12 +105,20 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target
 
 	if (dgram->icmp_hdr.type == ICMP_ECHOREPLY)
 	{
-		replied_ping = note_reply(*pings, dgram->icmp_hdr.un.echo.sequence, tv.tv_sec, tv.tv_usec);
-		printf("icmp_seq=%i ttl=%i time=%.3f ms\n",
-				dgram->icmp_hdr.un.echo.sequence,
-				dgram->ip_hdr.ttl,
-				time_to_fms(&(replied_ping->delay))
-			);
+		if (verify_checksum(&(dgram->icmp_hdr)))
+		{
+			replied_ping = note_reply(*pings, dgram->icmp_hdr.un.echo.sequence, tv.tv_sec, tv.tv_usec);
+			if (replied_ping)
+			{
+				printf("icmp_seq=%i ttl=%i time=%.3f ms\n",
+						invert_bytes(dgram->icmp_hdr.un.echo.sequence),
+						dgram->ip_hdr.ttl,
+						time_to_fms(&(replied_ping->delay))
+					);
+			}
+			else
+				printf("Unknown ICMP Sequence %i\n", invert_bytes(dgram->icmp_hdr.un.echo.sequence));
+		}
 
 	}
 	else if (dgram->icmp_hdr.type == ICMP_DEST_UNREACH)
@@ -138,6 +150,10 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target
 		}
 	}
 	else
+	{
 		printf("Unhandled ICMP type\n");
+			dgram_t*	ptr = (void*)dgram->data;
+			dgram_dump(ptr, bytes - (sizeof(struct iphdr) * 2) - sizeof(struct icmphdr));
+	}
 	return (0);
 }

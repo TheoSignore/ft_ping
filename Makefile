@@ -1,7 +1,10 @@
 SRCS	:=	ft_ping.c \
 			sending_and_receiving.c \
-			dgram_and_hdrs.c \
+			dgram.c \
+			icmphdr.c \
+			iphdr.c \
 			msghdr.c \
+			summary.c \
 			pings.c \
 			time_stuff.c \
 			utils.c
@@ -11,8 +14,8 @@ OBJS	=	${SRCS:%.c=.%.o}
 DEP		=	${SRCS:%.c=.%.d}
 
 #FLAGS	:=  -Wall -Wextra -Werror -MMD
-FLAGS	:=  -Wall -Wextra -Werror -g -MMD
-#FLAGS	:=  -Wall -Wextra -Werror -g -MMD -fsanitize=address
+#FLAGS	:=  -Wall -Wextra -Werror -g -MMD
+FLAGS	:=  -Wall -Wextra -Werror -g -MMD -fsanitize=address
 
 COMPILO	:= gcc
 

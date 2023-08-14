@@ -30,3 +30,11 @@ size_t	ipv4_ntoa(uint32_t s_addr, char* dst)
 			((uint8_t*)&(s_addr))[3]
 			));
 }
+
+uint16_t	invert_bytes(uint16_t n)
+{
+	uint8_t	c = ((uint8_t*)&n)[1];
+	((uint8_t*)&n)[1] = ((uint8_t*)&n)[0];
+	((uint8_t*)&n)[0] = c;
+	return n;
+}
