@@ -82,7 +82,9 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, host_t
 	source.addr.sin_port = 0;
 	source.addr.sin_addr.s_addr = dgram->ip_hdr.saddr;
 
-	if (dgram->icmp_hdr.type == ICMP_ECHO && id != dgram->icmp_hdr.un.echo.id)
+	if (dgram->icmp_hdr.type == ICMP_ECHO)
+		return (0);
+	if (dgram->icmp_hdr.type == ICMP_DEST_UNREACH && ((dgram_t*)(dgram->data))->icmp_hdr.un.echo.id != id)
 		return (0);
 	if (dgram->ip_hdr.saddr != target->addr.sin_addr.s_addr)
 	{
@@ -119,7 +121,6 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, host_t
 			else
 				printf("Unknown ICMP Sequence %i\n", invert_bytes(dgram->icmp_hdr.un.echo.sequence));
 		}
-
 	}
 	else if (dgram->icmp_hdr.type == ICMP_DEST_UNREACH)
 	{

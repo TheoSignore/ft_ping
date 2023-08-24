@@ -15,6 +15,7 @@
 #include <limits.h>
 #include <linux/errqueue.h>
 
+#define IP_TTL 64
 #define ICMP_ECHO_SIZE 64
 #define ICMP_DATA_SIZE (ICMP_ECHO_SIZE - sizeof(struct icmphdr))
 #define ICMP_ECHO_DATA "Lorem ipsum dolor sit amet, consectetur adipiscing odio."
