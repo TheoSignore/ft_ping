@@ -2,7 +2,7 @@
 
 int	sig = 0;
 
-static int	get_target(char* arg, target_t* target)
+static int	get_target(char* arg, host_t* target)
 {
 	int	ret = inet_pton(AF_INET, arg, (void*)&(target->addr.sin_addr));
 	target->addr.sin_family = AF_INET;
@@ -95,7 +95,7 @@ int	main(int ac, char** av)
 	}
 
 	//get info on targeted host
-	target_t	target;
+	host_t	target;
 	zerocalcare(&target, sizeof(target));
 	int ret = get_target(av[1], &target);
 	if (ret)

@@ -40,7 +40,7 @@ int		send_icmp_echo(void)
 	return icmp_echo(-1, NULL, NULL, NULL);
 }
 
-static int	get_fqdn(target_t* src)
+static int	get_fqdn(host_t* src)
 {
 	int		res = EAI_OVERFLOW;
 	size_t	size = 32;
@@ -69,12 +69,12 @@ static int	get_fqdn(target_t* src)
 	return (res);
 }
 
-int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target_t* target, char vrb, uint16_t id)
+int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, host_t* target, char vrb, uint16_t id)
 {
 	dgram_t*	dgram;
 	tv_t		tv;
 	ping_t		*replied_ping;
-	target_t	source;
+	host_t	source;
 
 	gettimeofday(&tv, NULL);
 	dgram = msg_hdr->msg_iov->iov_base;
@@ -82,7 +82,7 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target
 	source.addr.sin_port = 0;
 	source.addr.sin_addr.s_addr = dgram->ip_hdr.saddr;
 
-	if (dgram->icmp_hdr.type == ICMP_ECHO || id != dgram->icmp_hdr.un.echo.id)
+	if (dgram->icmp_hdr.type == ICMP_ECHO && id != dgram->icmp_hdr.un.echo.id)
 		return (0);
 	if (dgram->ip_hdr.saddr != target->addr.sin_addr.s_addr)
 	{
@@ -150,10 +150,6 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, target
 		}
 	}
 	else
-	{
 		printf("Unhandled ICMP type\n");
-			dgram_t*	ptr = (void*)dgram->data;
-			dgram_dump(ptr, bytes - (sizeof(struct iphdr) * 2) - sizeof(struct icmphdr));
-	}
 	return (0);
 }

@@ -59,7 +59,7 @@ void	get_summary(ping_t* first, summary_t* summary)
 	{
 		time_div(&delay_sum, summary->received, &(summary->avg));
 		get_mdev(first, &(summary->avg), &(summary->mdev), summary->received);
-		summary->loss = ((summary->received * 100) / summary->transmitted) - 100;
+		summary->loss = 100 - ((summary->received * 100) / summary->transmitted);
 	}
 	else
 		summary->loss = 100;

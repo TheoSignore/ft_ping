@@ -59,12 +59,12 @@ typedef struct s_summary
 	size_t	loss;
 }	summary_t;
 
-typedef struct s_target
+typedef struct s_host
 {
 	char*	fqdn;
 	char	ip[16];
 	sain_t	addr;
-}	target_t;
+}	host_t;
 
 extern int	sig;
 
@@ -93,7 +93,7 @@ void	free_pings(ping_t* first_ping);
 //sending_and_receiving
 void	set_icmp_echo(int socket, dgram_t* dgram, sain_t* targetptr, ping_t** pings);
 int		send_icmp_echo(void);
-int		receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int res, target_t* target, char vrb, uint16_t);
+int		receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int res, host_t* target, char vrb, uint16_t);
 
 //summary.c
 void	get_summary(ping_t* first, summary_t* summary);
