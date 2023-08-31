@@ -8,7 +8,7 @@ void	set_iphdr(struct iphdr* ip_hdr, const sain_t* target)
 	ip_hdr->tot_len = sizeof(dgram_t);
 	ip_hdr->id = 0;
 	ip_hdr->frag_off = 64;
-	ip_hdr->ttl = IP_TTL;
+	ip_hdr->ttl = FTIP_TTL;
 	ip_hdr->protocol = IPPROTO_ICMP;
 	ip_hdr->check = 0;
 	ip_hdr->saddr = 0;
