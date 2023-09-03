@@ -1,13 +1,5 @@
 #include "ft_ping.h"
 
-/*
- * Let's take a moment to appreciate this piece of code
- *
- * It is the product of hours of empirical testing
- * I do not understand how it matches the RFC
- * and yet, it works
- */
-
 static uint16_t	icmp_checksum(struct icmphdr* icmp_hdr)
 {
 	uint16_t	sum0;
