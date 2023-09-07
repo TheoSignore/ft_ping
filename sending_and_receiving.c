@@ -150,6 +150,10 @@ int	receive_icmp_reply(struct msghdr* msg_hdr, ping_t** pings, int bytes, host_t
 			dgram_dump(ptr, bytes - (sizeof(struct iphdr) * 2) - sizeof(struct icmphdr));
 		}
 	}
+	else if (dgram->icmp_hdr.type == ICMP_TIME_EXCEEDED)
+	{
+		printf("Time to leave exceeded\n");
+	}
 	else
 		printf("Unhandled ICMP type\n");
 	return (0);
